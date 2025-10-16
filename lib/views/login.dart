@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:manejemen_surat/views/home.dart';
+import 'package:manejemen_surat/views/splashscreen.dart';
+import 'package:manejemen_surat/views/ubahsandi.dart';
+import 'package:manejemen_surat/auth_data.dart'; // import global accounts
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,13 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   bool rememberMe = false;
   String? errorMessage;
 
-  // Dummy akun
-  final Map<String, String> accounts = {
-    "admin": "admin123",
-    "KetuaDPRD@dprd.go.id": "Ketuadprd123",
-    "Wakilketua@dprd.go.id": "staff123",
-    "sekertaris@dprd.go.id": "staff1777",
-  };
+  bool _isPasswordVisible = false; // toggle untuk password
 
   void _login() {
     String username = _usernameController.text.trim();
@@ -32,121 +28,198 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login berhasil, selamat datang $username")),
       );
-       // Navigasi ke halaman baru
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomePage()),
-    );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Splashscreen()),
+      );
     } else {
       setState(() => errorMessage = "Username atau password salah!");
     }
-
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Icon logo
-              Image.asset(
-              'assets/logo.png',
-              width: 120,
-              height: 120,
-            ),
-              const SizedBox(height: 10),
-
-              // Judul
-              Text(
-                "e-Arsip",
-                style: GoogleFonts.poppins(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
+      body: Container(
+        // Background gradasi biru
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(height: 30),
-
-              // Username
-              TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  labelText: "Username",
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Password
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  prefixIcon: const Icon(Icons.lock),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Remember Me + Reset Password
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: rememberMe,
-                        onChanged: (val) {
+                  // Logo
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 80,
+                      height: 80,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "e-Surat",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue, // judul biru
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Username
+                  TextField(
+                    controller: _usernameController,
+                    cursorColor: Colors.blue,
+                    decoration: InputDecoration(
+                      labelText: "Username",
+                      labelStyle: const TextStyle(color: Colors.blueGrey),
+                      prefixIcon: const Icon(Icons.person, color: Colors.blue),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: const BorderSide(
+                          color: Colors.blue,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password + icon mata
+                  TextField(
+                    controller: _passwordController,
+                    cursorColor: Colors.blue,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      labelStyle: const TextStyle(color: Colors.blueGrey),
+                      prefixIcon: const Icon(Icons.lock, color: Colors.blue),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: const BorderSide(
+                          color: Colors.blue,
+                          width: 2,
+                        ),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
                           setState(() {
-                            rememberMe = val ?? false;
+                            _isPasswordVisible = !_isPasswordVisible;
                           });
                         },
                       ),
-                      const Text("Remember Me"),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Remember + Reset
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Checkbox(
+                            activeColor: Colors.blue,
+                            value: rememberMe,
+                            onChanged: (val) {
+                              setState(() => rememberMe = val ?? false);
+                            },
+                          ),
+                          const Text(
+                            "Remember Me",
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UbahSandi(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Reset Password?",
+                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                        ),
+                      ),
                     ],
                   ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "Reset Password?",
-                      style: TextStyle(color: Colors.blue),
+
+                  if (errorMessage != null)
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue, // tombol biru
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: const Text(
+                        "Login",
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
               ),
-
-              if (errorMessage != null)
-                Text(errorMessage!,
-                    style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 20),
-
-              // Tombol Login
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text("Login",
-                      style: TextStyle(fontSize: 18, color: Colors.white)),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

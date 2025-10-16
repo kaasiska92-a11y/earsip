@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "633523502170",
+    "project_id": "esurat-9f6cb",
+    "storage_bucket": "esurat-9f6cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:633523502170:android:565bdf4670c0b8fb122c63",
+        "android_client_info": {
+          "package_name": "com.example.manejemen_surat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPR-nCCHiYLYR34k4FH-5FdSJ-wpplc1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

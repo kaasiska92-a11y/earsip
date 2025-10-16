@@ -1,23 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Import model dan halaman lain
+import 'package:manejemen_surat/models/surat.dart';
 import 'package:manejemen_surat/views/masuk/create.dart';
 import 'package:manejemen_surat/views/masuk/detail_surat.dart';
-
-class Surat {
-  final String nomor;
-  final String asal;
-  final String perihal;
-  bool sudahDisposisi;
-  bool sudahDibaca;
-
-  Surat({
-    required this.nomor,
-    required this.asal,
-    required this.perihal,
-    this.sudahDisposisi = false,
-    this.sudahDibaca = false,
-  });
-}
 
 class SuratMasuk extends StatefulWidget {
   const SuratMasuk({super.key});
@@ -27,304 +15,402 @@ class SuratMasuk extends StatefulWidget {
 }
 
 class _SuratMasukState extends State<SuratMasuk> {
-  int selectedTab = 0; // 0 = Semua, 1 = Disposisi
-  TextEditingController searchController = TextEditingController();
-
-  // contoh data
-  final List<Surat> semuaSurat = [
-    Surat(
-      nomor: "001/DPRD/III/2025",
-      asal: "Dinas Pendidikan Kota Palembang",
-      perihal: "Permohonan Anggaran Pembangunan Sekolah",
-      sudahDisposisi: false,
-      sudahDibaca: false,
-    ),
-  ];
-
+  final TextEditingController searchController = TextEditingController();
   String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
-    // filter sesuai tab + pencarian
-    List<Surat> suratFiltered = semuaSurat.where((s) {
-      final query = searchQuery.toLowerCase();
-      final cocok = s.nomor.toLowerCase().contains(query) ||
-          s.asal.toLowerCase().contains(query) ||
-          s.perihal.toLowerCase().contains(query);
-
-      if (selectedTab == 0) {
-        return cocok;
-      } else {
-        return cocok && s.sudahDisposisi && s.sudahDibaca;
-      }
-    }).toList();
-
-    // hitung jumlah surat belum dibaca
-    int unreadCount = semuaSurat.where((s) => !s.sudahDibaca).length;
-
     return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: Column(
+        children: [
+          const SizedBox(height: 16),
+          _buildSearchBar(),
+          const SizedBox(height: 8),
+          Expanded(child: _buildSemuaSurat()),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => TambahSuratMasuk()),
+            MaterialPageRoute(
+              builder: (context) => const TambahSuratMasuk(noUrut: null),
+            ),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: Column(
-        children: [
-          // HEADER
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
+    );
+  }
+
+  // 🔹 Search Bar (Versi Desain Baru)
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Judul + Notifikasi
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Surat Masuk",
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Stack(
-                      children: [
-                        const Icon(Icons.notifications,
-                            size: 28, color: Colors.white),
-                        if (unreadCount > 0)
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '$unreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Search bar
-                TextField(
-                  controller: searchController,
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Cari nomor, asal, atau perihal surat...",
-                    hintStyle: GoogleFonts.poppins(fontSize: 13),
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // TAB
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ChoiceChip(
-                      label: Text("Semua", style: GoogleFonts.poppins()),
-                      selected: selectedTab == 0,
-                      onSelected: (_) {
-                        setState(() => selectedTab = 0);
+          ],
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: TextField(
+          controller: searchController,
+          onChanged: (value) => setState(() => searchQuery = value),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+          decoration: InputDecoration(
+            hintText: "🔍  Cari surat berdasarkan nomor, asal, atau perihal...",
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey[500],
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            prefixIcon: Container(
+              margin: const EdgeInsets.only(left: 12, right: 4),
+              child: const Icon(Icons.search_rounded, color: Colors.blueAccent),
+            ),
+            suffixIcon:
+                searchQuery.isNotEmpty
+                    ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() => searchQuery = "");
                       },
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: Text("Disposisi", style: GoogleFonts.poppins()),
-                      selected: selectedTab == 1,
-                      onSelected: (_) {
-                        setState(() => selectedTab = 1);
-                      },
-                    ),
-                  ],
-                ),
-              ],
+                    )
+                    : null,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: Colors.blue.shade100, width: 1.2),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.8),
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(height: 12),
+  // 🔹 StreamBuilder daftar surat
+  Widget _buildSemuaSurat() {
+    return StreamBuilder<QuerySnapshot>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('surat_masuk')
+              .orderBy('created_at')
+              .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("Belum ada surat masuk"));
+        }
 
-          // LIST SURAT
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: suratFiltered.length,
-              itemBuilder: (context, index) {
-                final surat = suratFiltered[index];
-                final isRead = surat.sudahDibaca;
+        // 🔍 Filter pencarian
+        final docs =
+            snapshot.data!.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final query = searchQuery.toLowerCase();
+              return (data['nomor'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  ) ||
+                  (data['asal'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  ) ||
+                  (data['perihal'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  );
+            }).toList();
 
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      surat.sudahDibaca = true; // tandai sudah dibaca
-                    });
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailSurat(),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    decoration: BoxDecoration(
-                      color: isRead ? Colors.grey[100] : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 6,
-                          offset: const Offset(2, 3),
-                        )
-                      ],
-                    ),
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final surat = docs[docs.length - 1 - index];
+            final data = surat.data() as Map<String, dynamic>;
+            final suratModel = Surat.fromFirestore(surat);
+
+            final nomorTetap = data['no_urut'] ?? '-';
+            final isRead = data['sudahDibaca'] ?? false;
+            final sudahDisposisi = data['sudahDisposisi'] ?? false;
+            final tanggalTerima = data['tanggal_penerimaan'] ?? '-';
+
+            return Card(
+              color: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Stack(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      surat.reference.update({'sudahDibaca': true});
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailSurat(surat: suratModel),
+                        ),
+                      );
+                    },
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Nomor surat + unread marker
+                          // 🔹 Baris atas
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                "${index + 1}. ${surat.nomor}",
+                                "$nomorTetap. ${data['nomor'] ?? '-'}",
                                 style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
                                 ),
                               ),
-                              if (!surat.sudahDibaca)
-                                const Icon(Icons.circle,
-                                    color: Colors.red, size: 10),
+
+                              // 🔹 Tombol aksi (hapus + batal)
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.more_vert,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
+                                    ),
+                                    builder:
+                                        (_) => Padding(
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Aksi Surat",
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                ),
+                                                title: Text(
+                                                  "Hapus Surat",
+                                                  style: GoogleFonts.poppins(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                                onTap: () async {
+                                                  Navigator.pop(context);
+                                                  final confirm = await showDialog<
+                                                    bool
+                                                  >(
+                                                    context: context,
+                                                    builder:
+                                                        (_) => AlertDialog(
+                                                          title: const Text(
+                                                            "Konfirmasi Hapus",
+                                                          ),
+                                                          content: const Text(
+                                                            "Apakah Anda yakin ingin menghapus surat ini?",
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed:
+                                                                  () =>
+                                                                      Navigator.pop(
+                                                                        context,
+                                                                        false,
+                                                                      ),
+                                                              child: const Text(
+                                                                "Batal",
+                                                              ),
+                                                            ),
+                                                            ElevatedButton(
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor:
+                                                                    Colors.red,
+                                                              ),
+                                                              onPressed:
+                                                                  () =>
+                                                                      Navigator.pop(
+                                                                        context,
+                                                                        true,
+                                                                      ),
+                                                              child: const Text(
+                                                                "Hapus",
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                  );
+
+                                                  if (confirm == true) {
+                                                    await surat.reference
+                                                        .delete();
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          "Surat berhasil dihapus",
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.close,
+                                                  color: Colors.grey,
+                                                ),
+                                                title: Text(
+                                                  "Batal",
+                                                  style: GoogleFonts.poppins(
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                                onTap:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                  );
+                                },
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
 
-                          // Asal surat
                           Text(
-                            surat.asal,
+                            data['asal'] ?? '',
                             style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: Colors.grey[700],
+                              fontSize: 14,
+                              color: Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 2),
 
-                          // Perihal
                           Text(
-                            surat.perihal,
+                            data['perihal'] ?? '',
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 13,
+                              color: Colors.grey[800],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 4),
 
-                          // ACTION ICONS
-                          Row(
-                            children: [
-                              Icon(Icons.visibility,
-                                  size: 18, color: Colors.blue.shade600),
-                              const SizedBox(width: 12),
-                              Icon(Icons.reply,
-                                  size: 18, color: Colors.orange.shade600),
-                              const SizedBox(width: 12),
-                              Icon(Icons.download,
-                                  size: 18, color: Colors.green.shade600),
-                            ],
+                          Text(
+                            "Tanggal Penerimaan: $tanggalTerima",
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 4),
 
-                          // STATUS
-                          Row(
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: surat.sudahDisposisi
-                                      ? Colors.green[100]
-                                      : Colors.orange[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  surat.sudahDisposisi
-                                      ? "Sudah Disposisi"
-                                      : "Belum Disposisi",
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500),
-                                ),
+                          // 🔹 Status disposisi
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color:
+                                    sudahDisposisi
+                                        ? Colors.orange
+                                        : Colors.blue,
+                                width: 1.2,
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: surat.sudahDibaca
-                                      ? Colors.green[100]
-                                      : Colors.red[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  surat.sudahDibaca
-                                      ? "Sudah Dibaca"
-                                      : "Belum Dibaca",
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500),
-                                ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              sudahDisposisi
+                                  ? "Sudah Disposisi"
+                                  : "Belum Disposisi",
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    sudahDisposisi
+                                        ? Colors.orange
+                                        : Colors.blue,
                               ),
-                            ],
-                          )
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          )
-        ],
-      ),
+
+                  // 🔹 Label status baca
+                  Positioned(
+                    top: 8,
+                    right: 48,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                          color: isRead ? Colors.grey : Colors.green,
+                          width: 1.2,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isRead ? "Sudah Dibaca" : "Baru",
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isRead ? Colors.grey : Colors.green,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
