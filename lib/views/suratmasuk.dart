@@ -67,7 +67,8 @@ class _SuratMasukState extends State<SuratMasuk> {
           onChanged: (value) => setState(() => searchQuery = value),
           style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
           decoration: InputDecoration(
-            hintText: "🔍  Cari surat berdasarkan nomor, asal, atau perihal...",
+            hintText:
+                "Cari surat berdasarkan nomor, asal, atau perihal...", // ✅ sudah tanpa emoji 🔍
             hintStyle: GoogleFonts.poppins(
               fontSize: 13,
               color: Colors.grey[500],

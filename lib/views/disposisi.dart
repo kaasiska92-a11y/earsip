@@ -173,6 +173,7 @@ class DisposisiCard extends StatelessWidget {
       },
       borderRadius: BorderRadius.circular(12),
       child: Card(
+        color: Colors.white, // 🔹 Warna putih untuk kotak data
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 3,
         child: Container(
@@ -180,7 +181,7 @@ class DisposisiCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Header: nomor dan tanggal
+              // 🔹 Header: nomor, tanggal, dan titik tiga
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -192,13 +193,46 @@ class DisposisiCard extends StatelessWidget {
                       color: Colors.blue[700],
                     ),
                   ),
-                  Text(
-                    tanggal,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        tanggal,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // 🔹 Titik tiga menu
+                      PopupMenuButton<String>(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        onSelected: (value) async {
+                          if (value == 'hapus') {
+                            await FirebaseFirestore.instance
+                                .collection('disposisi')
+                                .doc(docId)
+                                .delete();
+                          } else if (value == 'batal') {
+                            // tidak melakukan apa-apa
+                          }
+                        },
+                        itemBuilder:
+                            (context) => [
+                              const PopupMenuItem(
+                                value: 'hapus',
+                                child: Text("Hapus"),
+                              ),
+                              const PopupMenuItem(
+                                value: 'batal',
+                                child: Text("Batal"),
+                              ),
+                            ],
+                        icon: const Icon(Icons.more_vert, size: 20),
+                      ),
+                    ],
                   ),
                 ],
               ),

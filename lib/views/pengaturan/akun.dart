@@ -27,6 +27,94 @@ class Akun extends StatefulWidget {
 }
 
 class _AkunState extends State<Akun> {
+  final List<User> akunList = [currentUser];
+
+  // Fungsi tambah akun baru
+  void _tambahAkunDialog() {
+    final namaController = TextEditingController();
+    final jabatanController = TextEditingController();
+    String role = 'user';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Tambah Akun Baru",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: namaController,
+                  decoration: const InputDecoration(
+                    labelText: "Nama Lengkap",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: jabatanController,
+                  decoration: const InputDecoration(
+                    labelText: "Jabatan",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: role,
+                  items: const [
+                    DropdownMenuItem(value: 'user', child: Text("User")),
+                    DropdownMenuItem(value: 'admin', child: Text("Admin")),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: "Role",
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (val) {
+                    role = val ?? 'user';
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Batal", style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              onPressed: () {
+                if (namaController.text.isNotEmpty &&
+                    jabatanController.text.isNotEmpty) {
+                  setState(() {
+                    akunList.add(
+                      User(
+                        nama: namaController.text,
+                        jabatan: jabatanController.text,
+                        role: role,
+                      ),
+                    );
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(
+                "Simpan",
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,6 +216,72 @@ class _AkunState extends State<Akun> {
               ),
             ),
 
+            const SizedBox(height: 12),
+
+            // ✅ Tambah Akun
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 3,
+                child: ListTile(
+                  leading: const Icon(Icons.person_add, color: Colors.blue),
+                  title: Text(
+                    "Tambah Akun",
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: _tambahAkunDialog,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ✅ Daftar Akun yang tersimpan
+            if (akunList.length > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Daftar Akun:",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...akunList
+                        .skip(1)
+                        .map(
+                          (u) => Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: const Icon(Icons.person),
+                              title: Text(
+                                u.nama,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "${u.jabatan}\nRole: ${u.role}",
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              isThreeLine: true,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ],
+                ),
+              ),
+
             const SizedBox(height: 40),
 
             // BUTTON LOGOUT
@@ -144,7 +298,6 @@ class _AkunState extends State<Akun> {
                     ),
                   ),
                   onPressed: () {
-                    // Ganti halaman ke LoginPage
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
