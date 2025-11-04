@@ -74,7 +74,7 @@ class _TambahSuratKeluarState extends State<TambahSuratKeluar> {
     );
   }
 
-  Future<void> _simpanSurat({required bool isDraft}) async {
+  Future<void> _simpanSurat() async {
     if (nomorController.text.isEmpty ||
         tujuanController.text.isEmpty ||
         perihalController.text.isEmpty ||
@@ -95,7 +95,6 @@ class _TambahSuratKeluarState extends State<TambahSuratKeluar> {
           "linkSurat": linkSuratController.text,
           "tanggalSurat":
               "${tanggalSurat!.year}-${tanggalSurat!.month}-${tanggalSurat!.day}",
-          "isDraft": isDraft,
           "createdAt": FieldValue.serverTimestamp(),
         });
       } else {
@@ -110,19 +109,12 @@ class _TambahSuratKeluarState extends State<TambahSuratKeluar> {
               "linkSurat": linkSuratController.text,
               "tanggalSurat":
                   "${tanggalSurat!.year}-${tanggalSurat!.month}-${tanggalSurat!.day}",
-              "isDraft": isDraft,
             });
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isDraft
-                ? "Surat disimpan sebagai Draft"
-                : "Surat berhasil diterbitkan",
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Surat berhasil disimpan")));
 
       Navigator.pop(context);
     } catch (e) {
@@ -212,48 +204,23 @@ class _TambahSuratKeluarState extends State<TambahSuratKeluar> {
             _buildTextField("Link Surat", linkSuratController),
 
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _simpanSurat(isDraft: true); // Simpan sebagai draft
-                    },
-                    icon: const Icon(Icons.save_as, color: Colors.white),
-                    label: Text(
-                      "Draf",
-                      style: GoogleFonts.poppins(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, // 🔹 Warna hijau
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _simpanSurat,
+                icon: const Icon(Icons.save, color: Colors.white),
+                label: Text(
+                  "Simpan",
+                  style: GoogleFonts.poppins(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _simpanSurat(isDraft: false); // Simpan & terbit
-                    },
-                    icon: const Icon(Icons.save, color: Colors.white),
-                    label: Text(
-                      "Simpan",
-                      style: GoogleFonts.poppins(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),

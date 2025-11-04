@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart'; // untuk salin teks
 
 class DetailSuratKeluar extends StatelessWidget {
   final Map<String, dynamic> surat;
@@ -13,10 +14,8 @@ class DetailSuratKeluar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = surat['status'] ?? "";
-
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFE3F2FD),
       appBar: AppBar(
         title: Text(
           "Detail Surat Keluar",
@@ -26,185 +25,62 @@ class DetailSuratKeluar extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                buildInputCard("Nomor Surat", surat['nomor']),
-                const SizedBox(height: 12),
-                buildInputCard("Tanggal Surat", surat['tanggalSurat']),
-                const SizedBox(height: 12),
-                buildInputCard("Tujuan", surat['tujuan']),
-                const SizedBox(height: 12),
-                buildInputCard("Perihal", surat['perihal']),
-                const SizedBox(height: 12),
-
-                if (surat['link_surat'] != null && surat['link_surat'] != "")
-                  buildLinkSuratCard(context, surat['link_surat']),
-
-                const SizedBox(height: 16),
-
-                // Hanya tampilkan card status jika Draft atau Terkirim
-                if (status == "Draft" || status == "Terkirim")
-                  buildStatusCard(context, status),
-
-                const SizedBox(height: 100),
-              ],
-            ),
-          ),
-
-          // Tombol bawah hanya untuk Draft atau Terkirim
-          if (status == "Draft" || status == "Terkirim")
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (status == "Terkirim") {
-                    _showArsipkanModal(context);
-                  } else if (status == "Draft") {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Klik untuk edit draft")),
-                    );
-                  }
-                },
-                icon: Icon(
-                  status == "Draft" ? Icons.edit : Icons.archive,
-                  color: Colors.white,
-                ),
-                label: Text(
-                  status == "Draft" ? "Edit" : "Arsipkan",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildInputCard(String title, String? value) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value ?? "-",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildStatusCard(BuildContext context, String status) {
-    Color bgColor = Colors.blue.shade50;
-    Color iconColor = Colors.green;
-
-    if (status == "Draft") {
-      bgColor = Colors.green.shade100;
-      iconColor = Colors.green;
-    }
-
-    return InkWell(
-      onTap:
-          status == "Draft"
-              ? () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Klik untuk edit draft")),
-                );
-              }
-              : null,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: bgColor.withOpacity(0.7)),
-        ),
-        child: Row(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.mark_email_unread, color: iconColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "Status: $status",
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-              ),
-            ),
+            buildDetailCard("Nomor Surat", surat['nomor']),
+            const SizedBox(height: 12),
+            buildDetailCard("Tanggal Surat", surat['tanggalSurat']),
+            const SizedBox(height: 12),
+            buildDetailCard("Tujuan", surat['tujuan']),
+            const SizedBox(height: 12),
+            buildDetailCard("Perihal", surat['perihal']),
+            const SizedBox(height: 12),
+
+            // 🔗 Tampilkan link yang bisa diklik
+            if (surat['linkSurat'] != null && surat['linkSurat'] != "")
+              buildLinkCard(context, surat['linkSurat']),
           ],
         ),
       ),
     );
   }
 
-  Widget buildLinkSuratCard(BuildContext context, String linkSurat) {
+  // 📋 Card umum untuk menampilkan data surat
+  Widget buildDetailCard(String title, String? value) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.link, color: Colors.blue, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                final Uri url = Uri.parse(linkSurat);
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Gagal membuka link surat")),
-                  );
-                }
-              },
-              child: Text(
-                linkSurat,
-                style: GoogleFonts.poppins(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value ?? "-",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
             ),
           ),
         ],
@@ -212,131 +88,88 @@ class DetailSuratKeluar extends StatelessWidget {
     );
   }
 
-  void _showArsipkanModal(BuildContext context) {
-    String? selectedKategori;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  // 🔗 Card khusus untuk link surat
+  Widget buildLinkCard(BuildContext context, String linkSurat) {
+    // Validasi dan perbaiki URL jika perlu
+    String validUrl = linkSurat;
+    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+      validUrl = 'https://$validUrl'; // Tambahkan https jika belum ada
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Arsipkan Surat",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Kategori",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...["Anggaran", "Rekomendasi", "Laporan", "Undangan"].map((
-                    kategori,
-                  ) {
-                    final isSelected = selectedKategori == kategori;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedKategori = kategori;
-                          });
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? Colors.blue.shade100
-                                    : Colors.white,
-                            border: Border.all(
-                              color:
-                                  isSelected
-                                      ? Colors.blue
-                                      : Colors.grey.shade300,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            kategori,
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                              color: isSelected ? Colors.blue : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(Icons.link, color: Colors.blue, size: 26),
+          const SizedBox(width: 10),
+          Expanded(
+            child: InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse(validUrl);
+                try {
+                  // Coba launch langsung tanpa canLaunchUrl
+                  bool launched = await launchUrl(
+                    url,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (!launched) {
+                    // Jika gagal, tampilkan pesan
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Gagal membuka link surat")),
                     );
-                  }),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          selectedKategori == null
-                              ? null
-                              : () {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Surat berhasil diarsipkan ke $selectedKategori",
-                                    ),
-                                  ),
-                                );
-                              },
-                      icon: const Icon(Icons.save),
-                      label: Text(
-                        "Simpan Arsip",
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        disabledBackgroundColor: Colors.grey.shade300,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  }
+                } catch (e) {
+                  // Tangani exception dan tampilkan detail error
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        "Gagal membuka link surat: ${e.toString()}",
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                  );
+                }
+              },
+              child: Text(
+                validUrl, // Tampilkan URL yang sudah divalidasi
+                style: GoogleFonts.poppins(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, color: Colors.grey),
+            tooltip: "Salin link",
+            onPressed: () async {
+              await Clipboard.setData(
+                ClipboardData(text: validUrl),
+              ); // Salin URL yang sudah divalidasi
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Link surat disalin ke clipboard"),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

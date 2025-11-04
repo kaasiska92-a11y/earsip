@@ -6,10 +6,17 @@ import 'package:manejemen_surat/views/home.dart';
 import 'package:manejemen_surat/views/suratmasuk.dart';
 import 'package:manejemen_surat/views/disposisi.dart';
 import 'package:manejemen_surat/views/suratkeluar.dart';
-import 'package:manejemen_surat/views/pengaturan/akun.dart'; // nanti bisa ganti ke PengaturanPage()
+import 'package:manejemen_surat/views/pengaturan/akun.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+  final String namaUser;
+  final String jabatanUser;
+
+  const MainPage({
+    super.key,
+    required this.namaUser,
+    required this.jabatanUser,
+  });
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -18,16 +25,14 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
-  // daftar halaman
   final List<Widget> _pages = [
-    const HomePage(),
+    const HomePage(), // Halaman Beranda keren
     const SuratMasuk(),
     const DisposisiSuratMasuk(),
     const SuratKeluar(),
-    const Akun(), // bisa diganti ke PengaturanPage()
+    const Akun(),
   ];
 
-  // judul tiap halaman
   final List<String> _titles = [
     "Beranda",
     "Surat Masuk",
@@ -40,7 +45,7 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       _selectedIndex = index;
     });
-    Navigator.pop(context); // tutup drawer otomatis
+    Navigator.pop(context); // Tutup drawer otomatis
   }
 
   @override
@@ -48,7 +53,7 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _titles[_selectedIndex], // judul dinamis
+          _titles[_selectedIndex],
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.blue,
@@ -76,31 +81,19 @@ class _MainPageState extends State<MainPage> {
                 style: GoogleFonts.poppins(fontSize: 13),
               ),
             ),
-            _buildDrawerItem(
-              icon: Icons.home,
-              text: "Beranda",
-              index: 0,
-            ),
-            _buildDrawerItem(
-              icon: Icons.mail,
-              text: "Surat Masuk",
-              index: 1,
-            ),
+            _buildDrawerItem(icon: Icons.home, text: "Beranda", index: 0),
+            _buildDrawerItem(icon: Icons.mail, text: "Surat Masuk", index: 1),
             _buildDrawerItem(
               icon: Icons.assignment,
               text: "Disposisi Masuk",
               index: 2,
             ),
-            _buildDrawerItem(
-              icon: Icons.send,
-              text: "Surat Keluar",
-              index: 3,
-            ),
+            _buildDrawerItem(icon: Icons.send, text: "Surat Keluar", index: 3),
             const Divider(),
             _buildDrawerItem(
               icon: Icons.settings,
               text: "Pengaturan",
-              index: 4, // ubah index sesuai urutan halaman _pages
+              index: 4,
             ),
           ],
         ),
@@ -109,7 +102,6 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // Widget drawer item dengan kotak biru aktif
   Widget _buildDrawerItem({
     required IconData icon,
     required String text,

@@ -1,8 +1,10 @@
+import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:manejemen_surat/views/splashscreen.dart';
+import 'package:manejemen_surat/users/navigasiuser.dart';
 import 'package:manejemen_surat/views/ubahsandi.dart';
-import 'package:manejemen_surat/auth_data.dart'; // import global accounts
+import 'package:manejemen_surat/widgets/navigasi.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,217 +13,333 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
   bool rememberMe = false;
-  String? errorMessage;
+  bool _isPasswordVisible = false;
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
 
-  bool _isPasswordVisible = false; // toggle untuk password
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _controller.forward();
+  }
 
-  void _login() {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text.trim();
+  void loginUser() async {
+    setState(() => isLoading = true);
 
-    if (accounts.containsKey(username) && accounts[username] == password) {
-      setState(() => errorMessage = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login berhasil, selamat datang $username")),
-      );
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: emailController.text.trim())
+              .where('password', isEqualTo: passwordController.text.trim())
+              .limit(1)
+              .get();
 
-      Navigator.pushReplacement(
+      if (snapshot.docs.isNotEmpty) {
+        final user = snapshot.docs.first.data();
+        final nama = user['nama'];
+        final jabatan = user['jabatan'];
+        final role = user['role'];
+
+        if (role == 'user') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      NavigasiUser(namaUser: nama, jabatanUser: jabatan),
+            ),
+          );
+        } else if (role == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => MainPage(namaUser: nama, jabatanUser: jabatan),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Email atau password salah.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
         context,
-        MaterialPageRoute(builder: (context) => const Splashscreen()),
-      );
-    } else {
-      setState(() => errorMessage = "Username atau password salah!");
+      ).showSnackBar(SnackBar(content: Text("Terjadi kesalahan: $e")));
     }
+
+    setState(() => isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        // Background gradasi biru
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
-                  ),
+      body: Stack(
+        children: [
+          // 🌊 Background biru gradasi
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF2196F3), // biru muda
+                  Color(0xFF0D47A1), // biru tua
                 ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: Column(
-                children: [
-                  // Logo
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/logo.png',
-                      width: 80,
-                      height: 80,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "e-Surat",
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue, // judul biru
-                    ),
-                  ),
-                  const SizedBox(height: 30),
+            ),
+          ),
 
-                  // Username
-                  TextField(
-                    controller: _usernameController,
-                    cursorColor: Colors.blue,
-                    decoration: InputDecoration(
-                      labelText: "Username",
-                      labelStyle: const TextStyle(color: Colors.blueGrey),
-                      prefixIcon: const Icon(Icons.person, color: Colors.blue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: const BorderSide(
-                          color: Colors.blue,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+          // 💧 Bubble lembut
+          Positioned(
+            top: -80,
+            left: -60,
+            child: Container(
+              width: 240,
+              height: 240,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF64B5F6),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -90,
+            right: -40,
+            child: Container(
+              width: 230,
+              height: 230,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1976D2),
+              ),
+            ),
+          ),
 
-                  // Password + icon mata
-                  TextField(
-                    controller: _passwordController,
-                    cursorColor: Colors.blue,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      labelStyle: const TextStyle(color: Colors.blueGrey),
-                      prefixIcon: const Icon(Icons.lock, color: Colors.blue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: const BorderSide(
-                          color: Colors.blue,
-                          width: 2,
-                        ),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
+          // ✨ Efek blur kaca
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(color: Colors.black.withOpacity(0)),
+          ),
 
-                  // Remember + Reset
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // 💠 Konten utama
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        children: [
-                          Checkbox(
-                            activeColor: Colors.blue,
-                            value: rememberMe,
-                            onChanged: (val) {
-                              setState(() => rememberMe = val ?? false);
+                      // 🏛️ Logo
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: 90,
+                          height: 90,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "e-Surat",
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+
+                      // 📧 Email field
+                      TextField(
+                        controller: emailController,
+                        cursorColor: Colors.white,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Email",
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.email,
+                            color: Colors.white,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.white30),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.white),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 🔒 Password field
+                      TextField(
+                        controller: passwordController,
+                        obscureText: !_isPasswordVisible,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Password",
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.lock,
+                            color: Colors.white,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
                             },
                           ),
-                          const Text(
-                            "Remember Me",
-                            style: TextStyle(fontSize: 12),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.white30),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.white),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // ✅ Remember Me + Reset Password
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: rememberMe,
+                                onChanged: (v) {
+                                  setState(() => rememberMe = v ?? false);
+                                },
+                                activeColor: Colors.white,
+                                checkColor: Colors.black,
+                              ),
+                              const Text(
+                                "Remember Me",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const UbahSandi(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Ubah Password?",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const UbahSandi(),
+                      const SizedBox(height: 25),
+
+                      // 🔵 Tombol Login
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: rememberMe ? loginUser : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
                             ),
-                          );
-                        },
-                        child: const Text(
-                          "Reset Password?",
-                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                          ),
+                          child: const Text(
+                            "Login",
+                            style: TextStyle(
+                              color: Color(0xFF1976D2),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-
-                  if (errorMessage != null)
-                    Text(
-                      errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue, // tombol biru
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

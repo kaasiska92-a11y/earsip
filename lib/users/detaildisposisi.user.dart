@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:manejemen_surat/users/formdisposisiuser.dart';
 
-class DetailDisposisi extends StatefulWidget {
+class DetailDisposisiUser extends StatefulWidget {
   final Map<String, dynamic> data;
   final String docId;
 
-  const DetailDisposisi({super.key, required this.data, required this.docId});
+  const DetailDisposisiUser({
+    super.key,
+    required this.data,
+    required this.docId,
+  });
 
   @override
-  State<DetailDisposisi> createState() => _DetailDisposisiState();
+  State<DetailDisposisiUser> createState() => _DetailDisposisiUserState();
 }
 
-class _DetailDisposisiState extends State<DetailDisposisi> {
+class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
   String? jabatan;
   String? nama;
   String? catatan;
@@ -24,7 +28,6 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
     _getDisposisiData();
   }
 
-  /// 🔹 Ambil data dari collection `disposisi` berdasarkan nomor surat
   Future<void> _getDisposisiData() async {
     try {
       final disposisiQuery =
@@ -35,7 +38,6 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
 
       if (disposisiQuery.docs.isNotEmpty) {
         final disposisiData = disposisiQuery.docs.first.data();
-
         setState(() {
           nama = disposisiData['nama'] ?? '-';
           jabatan = disposisiData['jabatan'] ?? '-';
@@ -49,14 +51,7 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
         });
       }
     } catch (e) {
-      debugPrint('Error ambil data disposisi: $e');
-    }
-  }
-
-  Future<void> _launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception("Tidak dapat membuka: $url");
+      debugPrint('❌ Error ambil data disposisi: $e');
     }
   }
 
@@ -86,8 +81,57 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
           ),
         ),
         centerTitle: true,
+
+        // 🔹 Tombol Pesawat Putih di Kanan Atas
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.airplanemode_active_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+            tooltip: "Buat Disposisi",
+            onPressed: () {
+              debugPrint("✈️ Tombol pesawat ditekan");
+
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  transitionDuration: const Duration(milliseconds: 400),
+                  pageBuilder:
+                      (_, __, ___) => FormDisposisiUser(
+                        data: data,
+                        noSurat: data['no_urut']?.toString() ?? '',
+                        nomorSurat: data['nomor'] ?? '',
+                        asalSurat: data['asal'] ?? '',
+                        perihal: data['perihal'] ?? '',
+                        docId: widget.docId,
+                      ),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    const begin = Offset(1.0, 0.0);
+                    const end = Offset.zero;
+                    final tween = Tween(
+                      begin: begin,
+                      end: end,
+                    ).chain(CurveTween(curve: Curves.easeInOut));
+                    return SlideTransition(
+                      position: animation.drive(tween),
+                      child: child,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
 
+      // 🔹 Isi Halaman
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
@@ -126,56 +170,11 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
                     style: GoogleFonts.poppins(fontSize: 14),
                   ),
                   const SizedBox(height: 14),
-
-                  InkWell(
-                    onTap: () {
-                      final link = data['lampiran_surat'];
-                      if (link != null && link.isNotEmpty) {
-                        _launchURL(link);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.shade100),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.picture_as_pdf_rounded,
-                            color: Colors.red,
-                            size: 26,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              data['lampiran_surat'] ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                color: Colors.blue.shade700,
-                                decoration: TextDecoration.underline,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.open_in_new_rounded,
-                            color: Colors.blue,
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
 
-            // 🔹 Bagian Riwayat Disposisi (dulu Catatan Disposisi)
             _sectionTitle(
               Icons.history_toggle_off_rounded,
               "Riwayat Disposisi",
@@ -237,6 +236,7 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
     );
   }
 
+  // 🔹 Fungsi Helper
   Widget buildItem(String title, String? value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

@@ -15,26 +15,23 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // 🔹 Ambil jumlah surat masuk yang belum dibaca
   Stream<int> getJumlahSuratMasuk() {
     return FirebaseFirestore.instance
-        .collection('surat_masuk') // ✅ ganti ke nama koleksi yang benar
+        .collection('surat_masuk')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // 🔹 Ambil jumlah disposisi
   Stream<int> getJumlahDisposisi() {
     return FirebaseFirestore.instance
-        .collection('disposisi') // pastikan sesuai di Firestore
+        .collection('disposisi')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // 🔹 Ambil jumlah surat keluar
   Stream<int> getJumlahSuratKeluar() {
     return FirebaseFirestore.instance
-        .collection('surat_keluar') // pastikan sesuai di Firestore
+        .collection('surat_keluar')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
@@ -42,26 +39,26 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFE3F2FD),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // 🔹 Banner
+            // 🔹 Banner modern
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue.shade700, Colors.blue.shade400],
+                  colors: [Colors.blue.shade800, Colors.blue.shade400],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.blue.shade200.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -76,13 +73,13 @@ class _HomePageState extends State<HomePage> {
                     child: const Icon(
                       Icons.emoji_events,
                       color: Colors.white,
-                      size: 32,
+                      size: 36,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      "Selamat Datang di Aplikasi Manajemen Surat e-Surat DPRD!",
+                      "Selamat Datang di Aplikasi e-Surat DPRD!",
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -107,7 +104,9 @@ class _HomePageState extends State<HomePage> {
                   subtitle: "Total surat diterima",
                   badgeValue: count,
                   buttonText: "Lihat Sekarang",
-                  color: Colors.blue,
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade600, Colors.blue.shade400],
+                  ),
                   badgeColor: Colors.redAccent,
                   onTap: () {
                     Navigator.push(
@@ -134,7 +133,12 @@ class _HomePageState extends State<HomePage> {
                   subtitle: "Surat telah didisposisikan",
                   badgeValue: count,
                   buttonText: "Lihat Sekarang",
-                  color: Colors.deepPurple,
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.deepPurple.shade600,
+                      Colors.deepPurple.shade400,
+                    ],
+                  ),
                   badgeColor: Colors.orangeAccent,
                   onTap: () {
                     Navigator.push(
@@ -158,10 +162,12 @@ class _HomePageState extends State<HomePage> {
                 return _menuCard(
                   icon: Icons.send_outlined,
                   title: "$count Surat Keluar",
-                  subtitle: "Surat Tersimpan",
+                  subtitle: "Surat tersimpan",
                   badgeValue: count,
                   buttonText: "Lihat Sekarang",
-                  color: Colors.green,
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade600, Colors.green.shade400],
+                  ),
                   badgeColor: Colors.teal,
                   onTap: () {
                     Navigator.push(
@@ -186,103 +192,109 @@ class _HomePageState extends State<HomePage> {
     required String subtitle,
     required String buttonText,
     required int badgeValue,
-    required Color color,
+    required LinearGradient gradient,
     required Color badgeColor,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      shadowColor: Colors.black26,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
           children: [
-            Row(
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, size: 32, color: color),
-                    ),
-                    if (badgeValue > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "$badgeValue",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  child: Icon(icon, size: 36, color: Colors.white),
                 ),
+                if (badgeValue > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        "$badgeValue",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onTap,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: color,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  elevation: 3,
-                ),
-                child: Text(
-                  buttonText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    alignment: Alignment.center,
+                    child: Text(
+                      buttonText,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

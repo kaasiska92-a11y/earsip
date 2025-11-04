@@ -12,20 +12,17 @@ class SuratKeluar extends StatefulWidget {
 }
 
 class _SuratKeluarState extends State<SuratKeluar> {
-  String selectedTab = "Tersimpan";
   TextEditingController searchController = TextEditingController();
   String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFE3F2FD), // 🌤️ Biru soft (#E3F2FD)
       body: Column(
         children: [
           const SizedBox(height: 16),
           _buildSearchBar(),
-          const SizedBox(height: 12),
-          _buildTabBar(),
           const SizedBox(height: 12),
           Expanded(child: _buildSuratList()),
         ],
@@ -89,50 +86,6 @@ class _SuratKeluarState extends State<SuratKeluar> {
     );
   }
 
-  // 🔹 TAB NAVIGASI
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          children: [
-            Expanded(child: _buildTab("Tersimpan")),
-            Expanded(child: _buildTab("Draft")),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTab(String text) {
-    bool isActive = selectedTab == text;
-    return InkWell(
-      borderRadius: BorderRadius.circular(30),
-      onTap: () => setState(() => selectedTab = text),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.blue.shade700 : Colors.transparent,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          style: GoogleFonts.poppins(
-            color: isActive ? Colors.white : Colors.grey.shade700,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
   // 🔹 DAFTAR SURAT
   Widget _buildSuratList() {
     return StreamBuilder<QuerySnapshot>(
@@ -152,12 +105,7 @@ class _SuratKeluarState extends State<SuratKeluar> {
               final data = doc.data() as Map<String, dynamic>;
               final query = searchQuery.toLowerCase();
 
-              final matchTab =
-                  (selectedTab == "Draft" && data["isDraft"] == true) ||
-                  (selectedTab == "Tersimpan" && data["isDraft"] == false);
-
-              final matchSearch =
-                  (data["nomor"] ?? "").toString().toLowerCase().contains(
+              return (data["nomor"] ?? "").toString().toLowerCase().contains(
                     query,
                   ) ||
                   (data["tujuan"] ?? "").toString().toLowerCase().contains(
@@ -166,8 +114,6 @@ class _SuratKeluarState extends State<SuratKeluar> {
                   (data["perihal"] ?? "").toString().toLowerCase().contains(
                     query,
                   );
-
-              return matchTab && matchSearch;
             }).toList();
 
         if (filteredDocs.isEmpty) {
@@ -186,18 +132,14 @@ class _SuratKeluarState extends State<SuratKeluar> {
           );
         }
 
-        // 🔹 Nomor urut dari bawah ke atas
         final total = filteredDocs.length;
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: total,
           itemBuilder: (context, index) {
-            // index 0 di atas, jadi urutannya dibalik
             final doc = filteredDocs[index];
             final data = doc.data() as Map<String, dynamic>;
-
-            // nomor urut dihitung dari bawah
             final nomorUrut = total - index;
 
             return _buildSuratCard(data, nomorUrut, doc.id);
@@ -213,8 +155,6 @@ class _SuratKeluarState extends State<SuratKeluar> {
     int nomorUrut,
     String docId,
   ) {
-    final isDraft = data["isDraft"] == true;
-
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -242,7 +182,7 @@ class _SuratKeluarState extends State<SuratKeluar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔸 Nomor + tanggal
+              // Nomor + tanggal + titik 3
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -269,12 +209,46 @@ class _SuratKeluarState extends State<SuratKeluar> {
                           color: Colors.grey.shade600,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.more_vert,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => TambahSuratKeluar(
+                                      editData: data,
+                                      docId: docId,
+                                    ),
+                              ),
+                            );
+                          } else if (value == 'hapus') {
+                            FirebaseFirestore.instance
+                                .collection('surat_keluar')
+                                .doc(docId)
+                                .delete();
+                          }
+                        },
+                        itemBuilder:
+                            (context) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(
+                                value: 'hapus',
+                                child: Text('Hapus'),
+                              ),
+                            ],
+                      ),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-
               Text(
                 "Tujuan: ${data['tujuan'] ?? ''}",
                 style: GoogleFonts.poppins(fontSize: 13),
@@ -285,46 +259,6 @@ class _SuratKeluarState extends State<SuratKeluar> {
                   fontWeight: FontWeight.w600,
                   fontSize: 13.5,
                   color: Colors.black87,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors:
-                          isDraft
-                              ? [Colors.orange.shade400, Colors.orange.shade600]
-                              : [Colors.blue.shade400, Colors.blue.shade600],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isDraft ? Icons.edit : Icons.check_circle,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isDraft ? "Draft" : "Tersimpan",
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],

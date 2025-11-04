@@ -42,6 +42,8 @@ class Surat {
     );
   }
 
+  get linkSurat => null;
+
   // ✅ untuk simpan balik ke Firestore
   Map<String, dynamic> toMap() {
     return {

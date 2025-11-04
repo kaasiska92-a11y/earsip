@@ -5,73 +5,91 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class BuatDisposisiPage extends StatefulWidget {
   final String noSurat;
 
-  const BuatDisposisiPage({super.key, required this.noSurat});
+  const BuatDisposisiPage({super.key, required this.noSurat, required String idSurat});
 
   @override
   State<BuatDisposisiPage> createState() => _BuatDisposisiPageState();
 }
 
 class _BuatDisposisiPageState extends State<BuatDisposisiPage> {
-  final List<Map<String, String>> penerimaList = [
-    {"jabatan": "Ketua DPRD", "nama": "Budi S.IP"},
-    {"jabatan": "Sekretaris DPRD", "nama": "Rina S.IP"},
-    {"jabatan": "Bagian Keuangan", "nama": "Siti S.IP"},
-    {"jabatan": "Humas & Protokol", "nama": "Andi S.IP"},
-    {"jabatan": "Kabag Persidangan", "nama": "Dewi S.IP"},
-    {"jabatan": "Kasubbag Risalah", "nama": "FajarS.IP"},
-    {"jabatan": "Staf Keuangan", "nama": "Lina S.IP"},
-    {"jabatan": "Kabag Hukum", "nama": "Rangga S.IP"},
-    {"jabatan": "Komisi I", "nama": "Arif S.IP"},
-    {"jabatan": "Komisi II", "nama": "Maya S.IP"},
-    {"jabatan": "Komisi III", "nama": "Doni S.IP"},
-    {"jabatan": "Komisi IV", "nama": "Intan S.IP"},
-  ];
+  List<Map<String, dynamic>> penerimaList = [];
+  Map<String, dynamic>? penerima;
 
-  final List<String> sifatSuratList = ["Biasa", "Penting", "Segera", "Rahasia"];
+  @override
+  void initState() {
+    super.initState();
+    getPenerimaList();
+  }
 
-  Map<String, String>? penerima;
-  String? sifatSurat;
+  Future<void> getPenerimaList() async {
+    try {
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+
+      final List<Map<String, dynamic>> data =
+          snapshot.docs
+              .map((doc) {
+                final user = doc.data() as Map<String, dynamic>;
+                if (user['role'] == 'user') {
+                  return {
+                    'jabatan': user['jabatan'] ?? '',
+                    'nama': user['nama'] ?? '',
+                    'uid': doc.id,
+                  };
+                }
+                return null;
+              })
+              .where((e) => e != null)
+              .cast<Map<String, dynamic>>()
+              .toList();
+
+      setState(() {
+        penerimaList = data;
+      });
+      print(
+        'Penerima list loaded: ${penerimaList.length} items',
+      ); // Logging untuk debug
+    } catch (e) {
+      print('Error loading penerima list: $e'); // Logging error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal memuat data penerima: $e")));
+    }
+  }
 
   Future<void> _simpanDisposisi() async {
+    if (penerima == null) return;
+
     try {
       final col = FirebaseFirestore.instance.collection('disposisi');
 
-      // 🔹 Cek dulu apakah nomor surat sudah ada
+      // Cek apakah surat sudah didisposisi oleh penerima yang sama
       final existingSnapshot =
-          await col.where('no_surat', isEqualTo: widget.noSurat).limit(1).get();
+          await col
+              .where('nomor', isEqualTo: widget.noSurat)
+              .where('penerima_uid', isEqualTo: penerima!['uid'])
+              .limit(1)
+              .get();
 
       if (existingSnapshot.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Surat ini sudah didisposisi sebelumnya."),
+            content: Text("Surat ini sudah didisposisi kepada penerima ini."),
           ),
         );
-        return; // stop execution
+        return;
       }
 
-      // 🔹 Cari nomor terakhir
-      final snapshot =
-          await col.orderBy('nomor', descending: true).limit(1).get();
-
-      int nextNomor = 1;
-      if (snapshot.docs.isNotEmpty) {
-        final lastNomor = snapshot.docs.first.data()['nomor'];
-        if (lastNomor != null) {
-          nextNomor = (lastNomor as int) + 1;
-        }
-      }
-
-      // 🔹 Simpan disposisi
+      // Simpan disposisi baru
       await col.add({
-        'no_surat': widget.noSurat,
-        'jabatan': penerima?['jabatan'],
-        'nama': penerima?['nama'],
-        'sifat_surat': sifatSurat,
-        'nomor': nextNomor,
+        'nomor': widget.noSurat,
+        'penerima_uid': penerima!['uid'],
+        'nama': penerima!['nama'],
+        'jabatan': penerima!['jabatan'],
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      // 🔹 Update status surat_masuk menjadi sudahDisposisi = true
+      // Update status surat_masuk
       final suratQuery =
           await FirebaseFirestore.instance
               .collection('surat_masuk')
@@ -84,15 +102,17 @@ class _BuatDisposisiPageState extends State<BuatDisposisiPage> {
         await docRef.update({'sudahDisposisi': true});
       }
 
+      print('Disposisi saved for: ${penerima!['nama']}'); // Logging untuk debug
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Disposisi berhasil dikirim!")),
       );
 
       Navigator.pop(context);
     } catch (e) {
+      print('Error saving disposisi: $e'); // Logging error
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Gagal menyimpan: $e")));
+      ).showSnackBar(SnackBar(content: Text("Gagal menyimpan disposisi: $e")));
     }
   }
 
@@ -111,112 +131,92 @@ class _BuatDisposisiPageState extends State<BuatDisposisiPage> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Penerima Disposisi", style: GoogleFonts.poppins()),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<Map<String, String>>(
-              value: penerima,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey),
+      body:
+          penerimaList.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Pilih Penerima Disposisi",
+                      style: GoogleFonts.poppins(),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: DropdownButtonFormField<Map<String, dynamic>>(
+                        isExpanded: true,
+                        value: penerima,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.blue,
+                              width: 2,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.grey),
+                          ),
+                        ),
+                        items:
+                            penerimaList.map((item) {
+                              return DropdownMenuItem<Map<String, dynamic>>(
+                                value: item,
+                                child: Text(
+                                  "${item['jabatan']} - ${item['nama']}",
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(fontSize: 14),
+                                ),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            penerima = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.send, color: Colors.white),
+                        label: Text(
+                          "Kirim Disposisi",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: () {
+                          if (penerima == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Harap pilih penerima!"),
+                              ),
+                            );
+                          } else {
+                            _simpanDisposisi();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              items:
-                  penerimaList.map((item) {
-                    return DropdownMenuItem<Map<String, String>>(
-                      value: item,
-                      child: Text(
-                        "${item['jabatan']} - ${item['nama']}",
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  penerima = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            Text("Sifat Surat", style: GoogleFonts.poppins()),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              value: sifatSurat,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey),
-                ),
-              ),
-              items:
-                  sifatSuratList.map((item) {
-                    return DropdownMenuItem(
-                      value: item,
-                      child: Text(
-                        item,
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  sifatSurat = value;
-                });
-              },
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.send, color: Colors.white),
-                label: Text(
-                  "Kirim Disposisi",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onPressed: () {
-                  if (penerima == null || sifatSurat == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Harap lengkapi semua field!"),
-                      ),
-                    );
-                  } else {
-                    _simpanDisposisi();
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class EditSuratMasuk extends StatefulWidget {
   final Surat surat;
 
-  const EditSuratMasuk({super.key, required this.surat,});
+  const EditSuratMasuk({super.key, required this.surat});
 
   @override
   State<EditSuratMasuk> createState() => _EditSuratMasukState();
@@ -70,9 +70,19 @@ class _EditSuratMasukState extends State<EditSuratMasuk> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFE3F2FD), // 🌈 Biru soft
       appBar: AppBar(
-        title: const Text("Edit Surat Masuk"),
         backgroundColor: Colors.blue,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Edit Surat Masuk",
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+        elevation: 2,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -90,10 +100,18 @@ class _EditSuratMasukState extends State<EditSuratMasuk> {
               ElevatedButton.icon(
                 onPressed: _updateSurat,
                 icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Simpan Perubahan"),
+                label: const Text(
+                  "Simpan Perubahan",
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 3,
+                  shadowColor: Colors.blue.withOpacity(0.4),
                 ),
               ),
             ],
@@ -109,15 +127,44 @@ class _EditSuratMasukState extends State<EditSuratMasuk> {
     int maxLines = 1,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        validator:
-            (val) => val == null || val.isEmpty ? "Tidak boleh kosong" : null,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          validator:
+              (val) => val == null || val.isEmpty ? "Tidak boleh kosong" : null,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.blue),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.blue.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.8),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.blue.shade100),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
         ),
       ),
     );

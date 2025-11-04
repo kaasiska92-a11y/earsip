@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:manejemen_surat/widgets/navigasi.dart';
+import 'package:manejemen_surat/views/splashscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'e-Arsip DPRD',
-      home: MainPage(),
+      home: Splashscreen(),
     );
   }
 }

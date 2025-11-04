@@ -1,36 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-// Import halaman login & ubah sandi
 import 'package:manejemen_surat/views/login.dart';
 import 'package:manejemen_surat/views/ubahsandi.dart';
 
-class User {
-  final String nama;
-  final String jabatan;
-  final String role;
+class AkunUser extends StatefulWidget {
+  final String namaUser;
+  final String jabatanUser;
+  final String roleUser;
 
-  User({required this.nama, required this.jabatan, required this.role});
-}
-
-// Default akun: Rizky Pratama
-final User currentUser = User(
-  nama: "Rizky Pratama S.IP",
-  jabatan: "Staf Bagian Umum DPRD",
-  role: "admin",
-);
-
-class Akun extends StatefulWidget {
-  const Akun({super.key});
+  const AkunUser({
+    super.key,
+    required this.namaUser,
+    required this.jabatanUser,
+    required this.roleUser,
+  });
 
   @override
-  State<Akun> createState() => _AkunState();
+  State<AkunUser> createState() => _AkunState();
 }
 
-class _AkunState extends State<Akun> {
+class _AkunState extends State<AkunUser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE3F2FD),
+      backgroundColor: Colors.grey[100],
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -62,7 +55,7 @@ class _AkunState extends State<Akun> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    currentUser.nama,
+                    widget.namaUser,
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -71,7 +64,7 @@ class _AkunState extends State<Akun> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    currentUser.jabatan,
+                    widget.jabatanUser,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.white70,
@@ -88,7 +81,7 @@ class _AkunState extends State<Akun> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      "Akses: ${currentUser.role.toUpperCase()}",
+                      "Akses: ${widget.roleUser.toUpperCase()}",
                       style: GoogleFonts.poppins(
                         color: Colors.green.shade800,
                         fontWeight: FontWeight.w600,

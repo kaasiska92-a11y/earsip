@@ -11,262 +11,373 @@ class DisposisiSuratMasuk extends StatefulWidget {
 }
 
 class _DisposisiSuratMasukState extends State<DisposisiSuratMasuk> {
-  int _selectedIndex = 0;
+  final TextEditingController searchController = TextEditingController();
+  String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFE3F2FD),
       body: Column(
         children: [
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildTabButton("Antrian", 0),
-              const SizedBox(width: 12),
-              _buildTabButton("History", 1),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: [
-                // ✅ TAB ANTRIAN
-                StreamBuilder<QuerySnapshot>(
-                  stream:
-                      FirebaseFirestore.instance
-                          .collection('disposisi')
-                          .orderBy('created_at', descending: true)
-                          .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return Center(
-                        child: Text(
-                          "Belum ada disposisi",
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: snapshot.data!.docs.length,
-                      itemBuilder: (context, index) {
-                        final doc = snapshot.data!.docs[index];
-                        final data = doc.data() as Map<String, dynamic>;
-
-                        final nomor = (data['nomor'] ?? '-').toString();
-                        final noSurat = (data['no_surat'] ?? '-').toString();
-                        final jabatan = (data['jabatan'] ?? '-').toString();
-                        final nama = (data['nama'] ?? '-').toString();
-                        final sifat =
-                            (data['sifat_surat'] ?? 'Biasa').toString();
-                        final tanggal =
-                            data['created_at'] != null
-                                ? (data['created_at'] as Timestamp)
-                                    .toDate()
-                                    .toString()
-                                    .substring(0, 10)
-                                : "-";
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: DisposisiCard(
-                            docId: doc.id,
-                            data: data,
-                            nomor: nomor,
-                            noSurat: noSurat,
-                            jabatan: jabatan,
-                            nama: nama,
-                            sifatSurat: sifat,
-                            tanggal: tanggal,
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-
-                // ✅ TAB HISTORY
-                Center(
-                  child: Text(
-                    'Belum ada riwayat',
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildSearchBar(),
+          const SizedBox(height: 8),
+          Expanded(child: _buildDisposisiList()),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String text, int index) {
-    final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+  // 🔹 Search Bar
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blue),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+          borderRadius: BorderRadius.circular(30),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.poppins(
-            color: isSelected ? Colors.white : Colors.blue,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+        child: TextField(
+          controller: searchController,
+          onChanged: (value) => setState(() => searchQuery = value),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+          decoration: InputDecoration(
+            hintText: "Cari disposisi berdasarkan nomor, asal, atau perihal...",
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey[500],
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            prefixIcon: Container(
+              margin: const EdgeInsets.only(left: 12, right: 4),
+              child: const Icon(Icons.search_rounded, color: Colors.blueAccent),
+            ),
+            suffixIcon:
+                searchQuery.isNotEmpty
+                    ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() => searchQuery = "");
+                      },
+                    )
+                    : null,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: Colors.blue.shade100, width: 1.2),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.8),
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class DisposisiCard extends StatelessWidget {
-  final String docId;
-  final Map<String, dynamic> data;
-  final String nomor;
-  final String noSurat;
-  final String jabatan;
-  final String nama;
-  final String sifatSurat;
-  final String tanggal;
+  // 🔹 StreamBuilder daftar disposisi
+  Widget _buildDisposisiList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('surat_masuk')
+              .orderBy('created_at', descending: true)
+              .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-  const DisposisiCard({
-    super.key,
-    required this.docId,
-    required this.data,
-    required this.nomor,
-    required this.noSurat,
-    required this.jabatan,
-    required this.nama,
-    required this.sifatSurat,
-    required this.tanggal,
-  });
+        // 🔍 Filter: Hanya tampilkan yang sudah disposisi, lalu filter pencarian
+        final docs =
+            snapshot.data!.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final sudahDisposisi = data['sudahDisposisi'] ?? false;
+              if (!sudahDisposisi) return false; // Hanya yang sudah disposisi
 
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // ✅ Navigasi ke detail
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailDisposisiPage(docId: docId, data: data),
-          ),
+              final query = searchQuery.toLowerCase();
+              return (data['nomor'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  ) ||
+                  (data['asal'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  ) ||
+                  (data['perihal'] ?? '').toString().toLowerCase().contains(
+                    query,
+                  );
+            }).toList();
+
+        if (docs.isEmpty) {
+          return const Center(child: Text("Belum ada disposisi"));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            return _DisposisiCard(docId: doc.id, data: data);
+          },
         );
       },
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        color: Colors.white, // 🔹 Warna putih untuk kotak data
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 3,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Header: nomor, tanggal, dan titik tiga
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "No: $nomor",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        tanggal,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      // 🔹 Titik tiga menu
-                      PopupMenuButton<String>(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        onSelected: (value) async {
-                          if (value == 'hapus') {
-                            await FirebaseFirestore.instance
-                                .collection('disposisi')
-                                .doc(docId)
-                                .delete();
-                          } else if (value == 'batal') {
-                            // tidak melakukan apa-apa
-                          }
-                        },
-                        itemBuilder:
-                            (context) => [
-                              const PopupMenuItem(
-                                value: 'hapus',
-                                child: Text("Hapus"),
-                              ),
-                              const PopupMenuItem(
-                                value: 'batal',
-                                child: Text("Batal"),
-                              ),
-                            ],
-                        icon: const Icon(Icons.more_vert, size: 20),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+    );
+  }
+}
 
-              Text(
-                "No Surat: $noSurat",
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.blue[700],
-                ),
-              ),
-              const SizedBox(height: 4),
+// 🔹 Card disposisi dengan titik tiga hapus
+class _DisposisiCard extends StatelessWidget {
+  final String docId;
+  final Map<String, dynamic> data;
 
-              Text(
-                "Diteruskan ke: $jabatan - $nama",
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey[800],
-                ),
-              ),
-              const SizedBox(height: 4),
+  const _DisposisiCard({required this.docId, required this.data});
 
-              Text(
-                "Sifat Surat: $sifatSurat",
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+  Future<void> _hapusDisposisi(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            title: Text(
+              "Hapus Disposisi?",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: Text(
+              "Yakin ingin menghapus disposisi ini? Data disposisi akan dihapus, dan surat akan kembali ke status belum disposisi.",
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  "Batal",
+                  style: GoogleFonts.poppins(color: Colors.grey),
                 ),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              TextButton(
+                child: Text(
+                  "Hapus",
+                  style: GoogleFonts.poppins(color: Colors.red),
+                ),
+                onPressed: () => Navigator.pop(context, true),
               ),
             ],
           ),
-        ),
+    );
+
+    if (confirm == true) {
+      try {
+        // Hapus semua disposisi terkait nomor surat ini dari collection 'disposisi'
+        final disposisiQuery =
+            await FirebaseFirestore.instance
+                .collection('disposisi')
+                .where('nomor', isEqualTo: data['nomor'])
+                .get();
+
+        for (var doc in disposisiQuery.docs) {
+          await doc.reference.delete();
+        }
+
+        // Update surat_masuk ke belum disposisi
+        await FirebaseFirestore.instance
+            .collection('surat_masuk')
+            .doc(docId)
+            .update({'sudahDisposisi': false});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Disposisi berhasil dihapus"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal menghapus disposisi: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final noUrut = data['no_urut'] ?? '-';
+    final nomor = data['nomor'] ?? '-';
+    final asal = data['asal'] ?? '-';
+    final perihal = data['perihal'] ?? '-';
+    final tanggal = data['tanggal_penerimaan'] ?? '-';
+    final sudahDisposisi = data['sudahDisposisi'] ?? false;
+    final sudahDibaca = data['sudahDibaca'] ?? false;
+
+    return Card(
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Stack(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              if (!sudahDibaca) {
+                FirebaseFirestore.instance
+                    .collection('surat_masuk')
+                    .doc(docId)
+                    .update({'sudahDibaca': true});
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailDisposisi(docId: docId, data: data),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 Nomor & Menu Titik Tiga
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "$noUrut. $nomor",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'hapus') _hapusDisposisi(context);
+                        },
+                        itemBuilder:
+                            (context) => [
+                              PopupMenuItem(
+                                value: 'hapus',
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Hapus",
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.red,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    asal,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    perihal,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Tanggal Penerimaan: $tanggal",
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Status disposisi
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: sudahDisposisi ? Colors.orange : Colors.blue,
+                        width: 1.2,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      sudahDisposisi ? "Sudah Disposisi" : "Belum Disposisi",
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: sudahDisposisi ? Colors.orange : Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Label merah "Baru"
+          if (!sudahDibaca)
+            Positioned(
+              top: 8,
+              right: 60, // kasih jarak biar gak tabrakan sama titik tiga
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  "Baru",
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
