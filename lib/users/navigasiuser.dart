@@ -31,8 +31,17 @@ class _NavigasiUserState extends State<NavigasiUser> {
   void initState() {
     super.initState();
     _pages = [
-      UserHome(namaUser: widget.namaUser, jabatanUser: widget.jabatanUser, emailUser: '',),
-      DisposisiUser(namaUser: widget.namaUser, jabatanUser: widget.jabatanUser),
+      UserHome(
+        namaUser: widget.namaUser,
+        jabatanUser: widget.jabatanUser,
+        emailUser: '',
+        uidUser: '',
+      ),
+      DisposisiUser(
+        namaUser: widget.namaUser,
+        jabatanUser: widget.jabatanUser,
+        uidUser: '',
+      ),
     ];
 
     _titles = ["Beranda", "Disposisi Masuk"];

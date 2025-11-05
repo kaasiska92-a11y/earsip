@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:manejemen_surat/users/formdisposisiuser.dart';
 
 class DetailDisposisiUser extends StatefulWidget {
@@ -11,6 +12,11 @@ class DetailDisposisiUser extends StatefulWidget {
     super.key,
     required this.data,
     required this.docId,
+    required String noUrut,
+    required nomor,
+    required asal,
+    required perihal,
+    required tanggal,
   });
 
   @override
@@ -20,7 +26,7 @@ class DetailDisposisiUser extends StatefulWidget {
 class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
   String? jabatan;
   String? nama;
-  String? catatan;
+  String? pesan;
 
   @override
   void initState() {
@@ -41,13 +47,13 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
         setState(() {
           nama = disposisiData['nama'] ?? '-';
           jabatan = disposisiData['jabatan'] ?? '-';
-          catatan = disposisiData['catatan'] ?? 'Belum ada catatan disposisi';
+          pesan = disposisiData['pesan'] ?? 'Belum ada pesan disposisi';
         });
       } else {
         setState(() {
           nama = '-';
           jabatan = '-';
-          catatan = 'Belum ada catatan disposisi';
+          pesan = 'Belum ada pesan disposisi';
         });
       }
     } catch (e) {
@@ -55,9 +61,18 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
     }
   }
 
+  // Fungsi diganti sesuai permintaan Anda
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception("Tidak dapat membuka: $url");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = widget.data;
+    final lampiran = data['lampiran_surat'];
 
     return Scaffold(
       backgroundColor: const Color(0xFFE3F2FD),
@@ -81,8 +96,6 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
           ),
         ),
         centerTitle: true,
-
-        // 🔹 Tombol Pesawat Putih di Kanan Atas
         actions: [
           IconButton(
             icon: const Icon(
@@ -92,8 +105,6 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
             ),
             tooltip: "Buat Disposisi",
             onPressed: () {
-              debugPrint("✈️ Tombol pesawat ditekan");
-
               Navigator.push(
                 context,
                 PageRouteBuilder(
@@ -106,6 +117,7 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
                         asalSurat: data['asal'] ?? '',
                         perihal: data['perihal'] ?? '',
                         docId: widget.docId,
+                        uidUser: '',
                       ),
                   transitionsBuilder: (
                     context,
@@ -131,7 +143,6 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
         ],
       ),
 
-      // 🔹 Isi Halaman
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
@@ -170,6 +181,65 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
                     style: GoogleFonts.poppins(fontSize: 14),
                   ),
                   const SizedBox(height: 14),
+
+                  if (lampiran != null && lampiran.toString().isNotEmpty)
+                    InkWell(
+                      onTap: () async {
+                        try {
+                          await _launchURL(lampiran);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Gagal membuka lampiran: $e"),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.shade100),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.picture_as_pdf_rounded,
+                              color: Colors.red,
+                              size: 26,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                lampiran,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.blue.shade700,
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.open_in_new_rounded,
+                              color: Colors.blue,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      "Tidak ada lampiran surat",
+                      style: GoogleFonts.poppins(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -217,7 +287,7 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          catatan ?? "Belum ada catatan disposisi",
+                          pesan ?? "Belum ada pesan disposisi",
                           style: GoogleFonts.poppins(
                             color: Colors.grey,
                             fontStyle: FontStyle.italic,
@@ -236,7 +306,7 @@ class _DetailDisposisiUserState extends State<DetailDisposisiUser> {
     );
   }
 
-  // 🔹 Fungsi Helper
+  // 🔹 Helper Widgets
   Widget buildItem(String title, String? value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

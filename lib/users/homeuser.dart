@@ -12,6 +12,7 @@ class UserHome extends StatefulWidget {
     required this.namaUser,
     required this.jabatanUser,
     required String emailUser,
+    required String uidUser,
   });
 
   @override
@@ -111,6 +112,7 @@ class _UserHomeState extends State<UserHome> {
                             (context) => DisposisiUser(
                               namaUser: widget.namaUser,
                               jabatanUser: widget.jabatanUser,
+                              uidUser: '',
                             ),
                       ),
                     );

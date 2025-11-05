@@ -5,10 +5,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:manejemen_surat/users/detaildisposisi.user.dart';
 
 class DisposisiUser extends StatefulWidget {
+  final String namaUser;
+  final String jabatanUser;
+
   const DisposisiUser({
     super.key,
-    required String namaUser,
-    required String jabatanUser,
+    required this.namaUser,
+    required this.jabatanUser,
+    required String uidUser,
   });
 
   @override
@@ -25,15 +29,18 @@ class _DisposisiUserState extends State<DisposisiUser> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFE3F2FD),
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
-          _buildSearchBar(),
-          const SizedBox(height: 10),
-          _buildTabBar(),
-          const SizedBox(height: 8),
-          Expanded(child: _buildDisposisiList()),
-        ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Jarak atas lebih nyaman
+            const SizedBox(height: 16),
+            _buildSearchBar(),
+            const SizedBox(height: 12),
+            _buildTabBar(),
+            const SizedBox(height: 8),
+            Expanded(child: _buildDisposisiList()),
+          ],
+        ),
       ),
     );
   }
@@ -122,15 +129,15 @@ class _DisposisiUserState extends State<DisposisiUser> {
 
   // 🔹 Daftar Disposisi
   Widget _buildDisposisiList() {
-    final disposisiStream =
+    final Stream<QuerySnapshot> suratMasukStream =
         FirebaseFirestore.instance
-            .collection('disposisi')
+            .collection('surat_masuk')
             .where('penerima_uid', isEqualTo: currentUserId)
             .orderBy('created_at', descending: true)
             .snapshots();
 
     return StreamBuilder<QuerySnapshot>(
-      stream: disposisiStream,
+      stream: suratMasukStream,
       builder: (context, snapshot) {
         if (snapshot.hasError)
           return Center(child: Text("Error: ${snapshot.error}"));
@@ -140,16 +147,13 @@ class _DisposisiUserState extends State<DisposisiUser> {
         final docs =
             snapshot.data!.docs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              final riwayat = List.from(data['riwayat'] ?? []);
-              final sudahDikerjakanUser = riwayat.any(
-                (r) => r['uid'] == currentUserId,
-              );
+              final sudahDisposisi = data['sudahDisposisi'] ?? false;
 
-              // Tab filter
-              if (showAntrian && sudahDikerjakanUser) return false;
-              if (!showAntrian && !sudahDikerjakanUser) return false;
+              // Filter tab
+              if (showAntrian && sudahDisposisi) return false;
+              if (!showAntrian && !sudahDisposisi) return false;
 
-              // Search filter
+              // Filter search
               final query = searchQuery.toLowerCase();
               return (data['nomor'] ?? '').toLowerCase().contains(query) ||
                   (data['asal'] ?? '').toLowerCase().contains(query) ||
@@ -171,9 +175,16 @@ class _DisposisiUserState extends State<DisposisiUser> {
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
           itemBuilder: (context, index) {
-            final doc = docs[index];
-            final data = doc.data() as Map<String, dynamic>;
-            return _DisposisiCardUser(docId: doc.id, data: data);
+            final data = docs[index].data() as Map<String, dynamic>;
+            return _DisposisiCardUser(
+              docId: docs[index].id,
+              data: data,
+              noUrut: data['no_urut']?.toString() ?? '-',
+              nomor: data['nomor'] ?? '-',
+              asal: data['asal'] ?? '-',
+              perihal: data['perihal'] ?? '-',
+              tanggal: data['tanggal_penerimaan'] ?? '-',
+            );
           },
         );
       },
@@ -185,17 +196,25 @@ class _DisposisiUserState extends State<DisposisiUser> {
 class _DisposisiCardUser extends StatelessWidget {
   final String docId;
   final Map<String, dynamic> data;
+  final String noUrut;
+  final String nomor;
+  final String asal;
+  final String perihal;
+  final String tanggal;
 
-  const _DisposisiCardUser({required this.docId, required this.data});
+  const _DisposisiCardUser({
+    required this.docId,
+    required this.data,
+    required this.noUrut,
+    required this.nomor,
+    required this.asal,
+    required this.perihal,
+    required this.tanggal,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final nomor = data['nomor'] ?? '-';
-    final asal = data['asal'] ?? '-';
-    final perihal = data['perihal'] ?? '-';
-    final riwayat = List.from(data['riwayat'] ?? []);
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final sudahDikerjakanUser = riwayat.any((r) => r['uid'] == currentUserId);
+    final sudahDisposisi = data['sudahDisposisi'] ?? false;
 
     return Card(
       color: Colors.white,
@@ -203,55 +222,64 @@ class _DisposisiCardUser extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DetailDisposisiUser(docId: docId, data: data),
-            ),
-          );
-        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header: nomor + titik 3
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    nomor,
+                    "$noUrut. $nomor",
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: Colors.blue,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color:
-                            sudahDikerjakanUser ? Colors.orange : Colors.blue,
-                        width: 1.2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      sudahDikerjakanUser
-                          ? "Sudah Disposisi"
-                          : "Belum Disposisi",
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            sudahDikerjakanUser ? Colors.orange : Colors.blue,
-                      ),
-                    ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'hapus') {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder:
+                              (_) => AlertDialog(
+                                title: const Text("Hapus Disposisi"),
+                                content: const Text(
+                                  "Apakah Anda yakin ingin menghapus disposisi ini?",
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pop(context, false),
+                                    child: const Text("Batal"),
+                                  ),
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pop(context, true),
+                                    child: const Text("Hapus"),
+                                  ),
+                                ],
+                              ),
+                        );
+                        if (confirm == true) {
+                          FirebaseFirestore.instance
+                              .collection('surat_masuk')
+                              .doc(docId)
+                              .delete();
+                        }
+                      }
+                    },
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 'hapus',
+                            child: Text("Hapus disposisi"),
+                          ),
+                        ],
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
                   ),
                 ],
               ),
@@ -268,9 +296,54 @@ class _DisposisiCardUser extends StatelessWidget {
                   color: Colors.grey[800],
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                "Tanggal Penerimaan: $tanggal",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: sudahDisposisi ? Colors.orange : Colors.blue,
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  sudahDisposisi ? "Sudah Disposisi" : "Belum Disposisi",
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: sudahDisposisi ? Colors.orange : Colors.blue,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => DetailDisposisiUser(
+                    docId: docId,
+                    data: data,
+                    noUrut: noUrut,
+                    nomor: nomor,
+                    asal: asal,
+                    perihal: perihal,
+                    tanggal: tanggal,
+                  ),
+            ),
+          );
+        },
       ),
     );
   }

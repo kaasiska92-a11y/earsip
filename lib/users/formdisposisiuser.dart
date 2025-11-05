@@ -18,7 +18,7 @@ class FormDisposisiUser extends StatefulWidget {
     required this.noSurat,
     required this.nomorSurat,
     required this.asalSurat,
-    required this.perihal,
+    required this.perihal, required String uidUser,
   });
 
   @override
@@ -213,6 +213,7 @@ class _FormDisposisiUserState extends State<FormDisposisiUser> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
+                  // Filter untuk mengecualikan akun yang sedang login
                   final users =
                       snapshot.data!.docs
                           .where((d) => d.id != currentUserId)
@@ -235,12 +236,10 @@ class _FormDisposisiUserState extends State<FormDisposisiUser> {
                           final data = d.data() as Map<String, dynamic>;
                           return DropdownMenuItem(
                             value: d.id,
-                            child: Flexible(
-                              child: Text(
-                                "${data['nama']} - ${data['jabatan']}",
-                                style: GoogleFonts.poppins(),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            child: Text(
+                              "${data['nama']} - ${data['jabatan']}",
+                              style: GoogleFonts.poppins(),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           );
                         }).toList(),

@@ -16,7 +16,7 @@ class DetailDisposisi extends StatefulWidget {
 class _DetailDisposisiState extends State<DetailDisposisi> {
   String? jabatan;
   String? nama;
-  String? catatan;
+  String? pesan;
 
   @override
   void initState() {
@@ -39,13 +39,13 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
         setState(() {
           nama = disposisiData['nama'] ?? '-';
           jabatan = disposisiData['jabatan'] ?? '-';
-          catatan = disposisiData['catatan'] ?? 'Belum ada catatan disposisi';
+          pesan = disposisiData['pesan'] ?? 'Belum ada pesan disposisi';
         });
       } else {
         setState(() {
           nama = '-';
           jabatan = '-';
-          catatan = 'Belum ada catatan disposisi';
+          pesan = 'Belum ada pesan disposisi';
         });
       }
     } catch (e) {
@@ -175,7 +175,7 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
             ),
             const SizedBox(height: 20),
 
-            // 🔹 Bagian Riwayat Disposisi (dulu Catatan Disposisi)
+            // 🔹 Bagian Riwayat Disposisi
             _sectionTitle(
               Icons.history_toggle_off_rounded,
               "Riwayat Disposisi",
@@ -218,7 +218,7 @@ class _DetailDisposisiState extends State<DetailDisposisi> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          catatan ?? "Belum ada catatan disposisi",
+                          pesan ?? "Belum ada pesan disposisi",
                           style: GoogleFonts.poppins(
                             color: Colors.grey,
                             fontStyle: FontStyle.italic,
